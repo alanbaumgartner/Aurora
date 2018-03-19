@@ -9,7 +9,6 @@ var backend *internal.Aurora
 var frontend *internal.Graphics
 
 func main() {
-
 	backend = internal.NewAurora()
 	frontend = internal.NewGraphics(backend)
 

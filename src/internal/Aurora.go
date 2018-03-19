@@ -24,7 +24,7 @@ type Aurora struct {
 	listener  net.Listener
 	listening bool
 
-	config Config
+	config *Config
 }
 
 func NewAurora() *Aurora {
@@ -37,7 +37,7 @@ func NewAurora() *Aurora {
 	self.settingsDir, _ = filepath.Abs(usr.HomeDir + "\\Aurora")
 	self.settingsFile, _ = filepath.Abs(self.settingsDir + "\\settings.json")
 
-	self.LoadConfig()
+	self.loadConfig()
 
 	self.setListening(false)
 
@@ -55,7 +55,7 @@ func (aurora *Aurora) setListening(listening bool) {
 // Loads the currently saved configuration. This is normally only called on startup
 // and should not need to be called again because the struct and file are always synced.
 
-func (aurora *Aurora) LoadConfig() {
+func (aurora *Aurora) loadConfig() {
 	_, err := os.Stat(aurora.settingsFile)
 	if os.IsNotExist(err) {
 		aurora.defaultConfig()
@@ -70,23 +70,23 @@ func (aurora *Aurora) LoadConfig() {
 		if err != nil {
 			fmt.Println(err, 3)
 		}
-		if aurora.config == (Config{}) {
-			aurora.config = newConfig("127.0.0.1", ":4731")
-			aurora.SaveConfig()
+		if aurora.config == nil {
+			aurora.config = newConfig("127.0.0.1", "4731")
+			aurora.saveConfig()
 		}
 	}
 }
 
 // Saves the current configuration.
 
-func (aurora *Aurora) SaveConfig() {
+func (aurora *Aurora) saveConfig() {
 	settings, err := json.Marshal(aurora.config)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err, 4)
 	}
-	err = ioutil.WriteFile(aurora.settingsFile, settings, 0777)
+	err = ioutil.WriteFile(aurora.settingsFile, settings, 0644)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err, 5)
 	}
 }
 
@@ -95,20 +95,20 @@ func (aurora *Aurora) SaveConfig() {
 func (aurora *Aurora) defaultConfig() {
 	err := os.MkdirAll(aurora.settingsDir, os.ModeDir)
 	if err != nil {
-		fmt.Println(err, 1)
+		fmt.Println(err, 6)
 	}
 	_, err = os.Create(aurora.settingsFile)
 	if err != nil {
-		fmt.Println(err, 2)
+		fmt.Println(err, 7)
 	}
-	aurora.config = newConfig("127.0.0.1", ":4731")
+	aurora.config = newConfig("127.0.0.1", "4731")
 	settings, err := json.Marshal(aurora.config)
 	if err != nil {
-		fmt.Println(err, 3)
+		fmt.Println(err, 8)
 	}
-	err = ioutil.WriteFile(aurora.settingsFile, settings, 0777)
+	err = ioutil.WriteFile(aurora.settingsFile, settings, 0644)
 	if err != nil {
-		fmt.Println(err, 4)
+		fmt.Println(err, 9)
 	}
 }
 
@@ -121,9 +121,9 @@ func (aurora *Aurora) stopListening() {
 
 func (aurora *Aurora) startListening() {
 	aurora.setListening(true)
-	aurora.listener, err = net.Listen("tcp", aurora.config.getPort())
+	aurora.listener, err = net.Listen("tcp", ":"+aurora.config.getPort())
 	if err != nil {
-		fmt.Println("Listener instantiation error", err)
+		fmt.Println(err, 10)
 	}
 	for {
 		if !aurora.getListening() {
@@ -131,7 +131,7 @@ func (aurora *Aurora) startListening() {
 		}
 		conn, err := aurora.listener.Accept()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err, 11)
 			aurora.setListening(false)
 			aurora.stopListening()
 			runtime.Goexit()
@@ -152,7 +152,7 @@ func (aurora *Aurora) receive(conn net.Conn) {
 		message = strings.TrimRight(message, "\\")
 
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err, 12)
 			runtime.Goexit()
 		}
 		rw.Flush()
@@ -167,8 +167,8 @@ type Config struct {
 	Port string
 }
 
-func newConfig(newHost string, newPort string) Config {
-	self := Config{}
+func newConfig(newHost string, newPort string) *Config {
+	self := &Config{}
 	self.Host = newHost
 	self.Port = newPort
 	return self
