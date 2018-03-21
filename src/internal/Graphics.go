@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"github.com/dontpanic92/wxGo/wx"
 )
 
@@ -49,8 +50,10 @@ func NewGraphics(aurora *Aurora) *Graphics {
 	wx.Bind(self, wx.EVT_MENU, self.toggleListening, self.menuItemListen.GetId())
 	wx.Bind(self, wx.EVT_MENU, self.settings, menuItemSettings.GetId())
 
-	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.save, self.settingsDialog.saveBtn.GetId())
-	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.load, self.settingsDialog.loadBtn.GetId())
+	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.saveConfig, self.settingsDialog.saveBtn.GetId())
+	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.loadConfig, self.settingsDialog.loadBtn.GetId())
+	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.buildClient, self.settingsDialog.buildBtn.GetId())
+	wx.Bind(self.settingsDialog, wx.EVT_BUTTON, self.generateKey, self.settingsDialog.generateKeyBtn.GetId())
 
 	self.Layout()
 
@@ -63,19 +66,33 @@ func (graphics *Graphics) settings(_ wx.Event) {
 	graphics.settingsDialog.ShowModal()
 }
 
-func (graphics *Graphics) save(_ wx.Event) {
+func (graphics *Graphics) saveConfig(_ wx.Event) {
 	graphics.aurora.config.setHost(graphics.settingsDialog.hostCtrl.GetValue())
 	graphics.aurora.config.setPort(graphics.settingsDialog.portCtrl.GetValue())
+	graphics.aurora.config.setKey(graphics.settingsDialog.keyCtrl.GetValue())
 	graphics.aurora.saveConfig()
 	graphics.settingsDialog.Close()
 	graphics.settingsDialog.hostCtrl.SetValue("")
 	graphics.settingsDialog.portCtrl.SetValue("")
+	graphics.settingsDialog.keyCtrl.SetValue("")
 }
 
-func (graphics *Graphics) load(_ wx.Event) {
+func (graphics *Graphics) loadConfig(_ wx.Event) {
 	graphics.aurora.loadConfig()
 	graphics.settingsDialog.hostCtrl.SetValue(graphics.aurora.config.getHost())
 	graphics.settingsDialog.portCtrl.SetValue(graphics.aurora.config.getPort())
+	keyString := string(graphics.aurora.config.Key[:])
+	graphics.settingsDialog.keyCtrl.SetValue(keyString)
+}
+
+func (graphics *Graphics) buildClient(_ wx.Event) {
+	fmt.Println(graphics.aurora.getLiveConnections())
+}
+
+func (graphics *Graphics) generateKey(_ wx.Event) {
+	key := NewEncryptionKey()
+	keyString := string(key[:])
+	graphics.settingsDialog.keyCtrl.SetValue(keyString)
 }
 
 func (graphics *Graphics) toggleListening(_ wx.Event) {
@@ -94,10 +111,15 @@ func (graphics *Graphics) toggleListening(_ wx.Event) {
 
 type SettingsDialog struct {
 	wx.Dialog
+
 	hostCtrl wx.TextEntry
 	portCtrl wx.TextEntry
-	saveBtn  wx.Button
-	loadBtn  wx.Button
+	keyCtrl  wx.TextEntry
+
+	buildBtn       wx.Button
+	saveBtn        wx.Button
+	loadBtn        wx.Button
+	generateKeyBtn wx.Button
 }
 
 func NewSettingsDialog() *SettingsDialog {
@@ -105,23 +127,49 @@ func NewSettingsDialog() *SettingsDialog {
 	self.Dialog = wx.NewDialog(wx.NullWindow, -1, "Settings")
 
 	columnOne := wx.NewBoxSizer(wx.VERTICAL)
-	rowOneTwo := wx.NewBoxSizer(wx.VERTICAL)
+	columnTwo := wx.NewBoxSizer(wx.VERTICAL)
+	columnThree := wx.NewBoxSizer(wx.VERTICAL)
 	row := wx.NewBoxSizer(wx.HORIZONTAL)
 
 	row.Add(columnOne)
-	row.Add(rowOneTwo)
+	row.Add(columnTwo)
+	row.Add(columnThree)
+
+	// Labels
+
+	hostLbl := wx.NewStaticText(self, wx.ID_ANY, "Host", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnOne.Add(hostLbl, 0, wx.CENTER, 5)
+
+	portLbl := wx.NewStaticText(self, wx.ID_ANY, "Port", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnTwo.Add(portLbl, 0, wx.CENTER, 5)
+
+	passLbl := wx.NewStaticText(self, wx.ID_ANY, "Password", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnThree.Add(passLbl, 0, wx.CENTER, 5)
+
+	// Text Entries
 
 	self.hostCtrl = wx.NewTextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, wx.DefaultSize, 0)
-	columnOne.Add(self.hostCtrl, 0, wx.ALL|wx.EXPAND, 5)
+	columnOne.Add(self.hostCtrl, 0, wx.EXPAND|wx.ALL, 5)
 
 	self.portCtrl = wx.NewTextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, wx.DefaultSize, 0)
-	rowOneTwo.Add(self.portCtrl, 0, wx.ALL|wx.EXPAND, 5)
+	columnTwo.Add(self.portCtrl, 0, wx.EXPAND|wx.ALL, 5)
+
+	self.keyCtrl = wx.NewTextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnThree.Add(self.keyCtrl, 0, wx.EXPAND|wx.ALL, 5)
+
+	// Buttons
+
+	self.generateKeyBtn = wx.NewButton(self, wx.ID_ANY, "Generate Key", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnThree.Add(self.generateKeyBtn, 0, wx.EXPAND|wx.ALL, 5)
+
+	self.buildBtn = wx.NewButton(self, wx.ID_ANY, "Build", wx.DefaultPosition, wx.DefaultSize, 0)
+	columnTwo.Add(self.buildBtn, 0, wx.EXPAND|wx.ALL, 5)
 
 	self.saveBtn = wx.NewButton(self, wx.ID_ANY, "Save", wx.DefaultPosition, wx.DefaultSize, 0)
-	columnOne.Add(self.saveBtn, 0, wx.ALL|wx.EXPAND, 5)
+	columnTwo.Add(self.saveBtn, 0, wx.EXPAND|wx.ALL, 5)
 
 	self.loadBtn = wx.NewButton(self, wx.ID_ANY, "Load", wx.DefaultPosition, wx.DefaultSize, 0)
-	rowOneTwo.Add(self.loadBtn, 0, wx.ALL|wx.EXPAND, 5)
+	columnThree.Add(self.loadBtn, 0, wx.EXPAND|wx.ALL, 5)
 
 	self.SetSizer(row)
 

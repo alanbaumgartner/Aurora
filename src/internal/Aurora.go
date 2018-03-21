@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 var err error
@@ -23,6 +22,8 @@ type Aurora struct {
 
 	listener  net.Listener
 	listening bool
+
+	liveConnections ItemSet
 
 	config *Config
 }
@@ -71,7 +72,7 @@ func (aurora *Aurora) loadConfig() {
 			fmt.Println(err, 3)
 		}
 		if aurora.config == nil {
-			aurora.config = newConfig("127.0.0.1", "4731")
+			aurora.config = newConfig("127.0.0.1", "4731", "UXpQV01GT2hXb1JBMHZ1QU0vdG5BMlZrZElRMHV2YmxTNXVoKytDUVBRZz0=")
 			aurora.saveConfig()
 		}
 	}
@@ -101,7 +102,7 @@ func (aurora *Aurora) defaultConfig() {
 	if err != nil {
 		fmt.Println(err, 7)
 	}
-	aurora.config = newConfig("127.0.0.1", "4731")
+	aurora.config = newConfig("127.0.0.1", "4731", "UXpQV01GT2hXb1JBMHZ1QU0vdG5BMlZrZElRMHV2YmxTNXVoKytDUVBRZz0=")
 	settings, err := json.Marshal(aurora.config)
 	if err != nil {
 		fmt.Println(err, 8)
@@ -110,11 +111,6 @@ func (aurora *Aurora) defaultConfig() {
 	if err != nil {
 		fmt.Println(err, 9)
 	}
-}
-
-func (aurora *Aurora) stopListening() {
-	aurora.setListening(false)
-	aurora.listener.Close()
 }
 
 // Establishes connection with a client.
@@ -136,27 +132,64 @@ func (aurora *Aurora) startListening() {
 			aurora.stopListening()
 			runtime.Goexit()
 		}
-		go aurora.receive(conn)
+		aurora.liveConnections.Add(conn)
 	}
 }
 
-// Listens for incoming messages from connections established in startListening().
+// Disconnects from all clients.
 
-func (aurora *Aurora) receive(conn net.Conn) {
-	for {
-		if !aurora.getListening() {
-			runtime.Goexit()
-		}
-		rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-		message, err := rw.ReadString('\\')
-		message = strings.TrimRight(message, "\\")
+func (aurora *Aurora) stopListening() {
+	aurora.setListening(false)
+	aurora.listener.Close()
+}
 
+// Send commands to the clients.
+
+func (aurora *Aurora) sendCommand(conn net.Conn, cmd string) {
+	writer := bufio.NewWriter(conn)
+	switch cmd {
+	case "PING\\":
+		_, err := writer.WriteString(cmd)
 		if err != nil {
-			fmt.Println(err, 12)
-			runtime.Goexit()
+			aurora.liveConnections.Delete(conn)
 		}
-		rw.Flush()
-		fmt.Println(message)
+		go aurora.receive(conn, cmd)
+	}
+}
+
+// Amount of currently live connections.
+
+func (aurora *Aurora) getLiveConnections() int {
+	for _, client := range aurora.liveConnections.Items() {
+		aurora.sendCommand(client, "PING\\")
+	}
+	return aurora.liveConnections.Size()
+}
+
+// Receives responses from the clients based on each command.
+
+func (aurora *Aurora) receive(conn net.Conn, cmd string) {
+	reader := bufio.NewReader(conn)
+	if !aurora.getListening() {
+		aurora.liveConnections.Delete(conn)
+		runtime.Goexit()
+	}
+	message, err := reader.ReadString('\\')
+
+	if err != nil {
+		fmt.Println(err, 12)
+		aurora.liveConnections.Delete(conn)
+		runtime.Goexit()
+	}
+
+	switch cmd {
+	case "PING\\":
+		if message != "PONG\\" {
+			aurora.liveConnections.Delete(conn)
+		}
+		runtime.Goexit()
+	case "SCREENSHOT\\":
+		runtime.Goexit()
 	}
 }
 
@@ -165,12 +198,16 @@ func (aurora *Aurora) receive(conn net.Conn) {
 type Config struct {
 	Host string
 	Port string
+	Key  [32]byte
 }
 
-func newConfig(newHost string, newPort string) *Config {
+func newConfig(newHost string, newPort string, newKey string) *Config {
 	self := &Config{}
 	self.Host = newHost
 	self.Port = newPort
+	var key [32]byte
+	copy(key[:], newKey)
+	self.Key = key
 	return self
 }
 
@@ -188,4 +225,14 @@ func (config *Config) setPort(newPort string) {
 
 func (config *Config) getPort() string {
 	return config.Port
+}
+
+func (config *Config) setKey(newKey string) {
+	var key [32]byte
+	copy(key[:], newKey)
+	config.Key = key
+}
+
+func (config *Config) getKey() [32]byte {
+	return config.Key
 }

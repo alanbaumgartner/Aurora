@@ -4,43 +4,38 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"os"
-	"time"
+	"runtime"
+	"strings"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "127.0.0.1:25565")
+	conn, err := net.Dial("tcp", "127.0.0.1:4731")
 	if err != nil {
 		fmt.Println(err)
 	}
-	exit := make(chan string)
-
-	go send(conn)
-
-	for {
-		select {
-		case <-exit:
-			{
-				os.Exit(0)
-			}
-		}
-	}
+	receiveCommand(conn)
 }
 
-func send(conn net.Conn) {
-	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-	rw.WriteString("Hello.\\")
-	rw.Flush()
-	time.Sleep(2000000000)
-	rw.WriteString("Hello.\\")
-	rw.Flush()
-	time.Sleep(2000000000)
-	rw.WriteString("Hello.\\")
-	rw.Flush()
-	time.Sleep(2000000000)
-	rw.WriteString("Hello.\\")
-	rw.Flush()
-	time.Sleep(2000000000)
-	rw.WriteString("Done\\")
-	rw.Flush()
+func sendMessage(conn net.Conn, cmd string) {
+	writer := bufio.NewWriter(conn)
+	switch cmd {
+	case "PING":
+		writer.WriteString("PONG\\")
+	}
+	writer.Flush()
+}
+
+func receiveCommand(conn net.Conn) {
+	reader := bufio.NewReader(conn)
+	for {
+		cmd, err := reader.ReadString('\\')
+
+		if err != nil {
+			fmt.Println(err)
+			runtime.Goexit()
+		}
+
+		cmd = strings.TrimRight(cmd, "\\")
+		sendMessage(conn, cmd)
+	}
 }
