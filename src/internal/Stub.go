@@ -6,7 +6,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 )
+
+var wg sync.WaitGroup
 
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:4731")
@@ -15,19 +18,28 @@ func main() {
 		fmt.Println(err)
 	}
 
+	enc := json.NewEncoder(conn)
+
+	wg.Add(2)
+
+	go sendFile(enc, "test1.exe")
+	go sendFile(enc, "test2.exe")
+
+	wg.Wait()
+
+}
+
+func sendFile(enc *json.Encoder, fileName string) {
 	buffer := make([]byte, 1024)
 
 	file, _ := os.Open("f.exe")
 	defer file.Close()
 
 	packet := Packet{}
-	enc := json.NewEncoder(conn)
-
 	i := 0
-
 	for {
 		packet.Type = "FILE"
-		packet.FileName = "test.exe"
+		packet.FileName = fileName
 		packet.Done = false
 		packet.BytePos = int64(i)
 		_, err := file.Read(buffer)
@@ -43,6 +55,6 @@ func main() {
 		packet.Data = buffer
 		enc.Encode(packet)
 		i++
-		fmt.Println(i)
 	}
+	wg.Done()
 }

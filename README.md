@@ -12,4 +12,4 @@ This project was started to learn networking in go and get myself started in the
 
 ## Notice
 
-Currently dropping GUI support in favor or simplicity. A GUI will be added when Aurora itself is more fledged out.
+Currently dropping GUI support in favor or simplicity. A GUI will be added when Aurora itself is more fleshed out.

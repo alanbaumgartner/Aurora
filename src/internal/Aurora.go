@@ -27,6 +27,7 @@ type Aurora struct {
 func (aurora *Aurora) Listen() {
 	var err error
 	aurora.listener, err = net.Listen("tcp", ":4731")
+	fmt.Println("Aurora: Now accepting connections.")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -35,12 +36,13 @@ func (aurora *Aurora) Listen() {
 		if err != nil {
 			fmt.Println(err)
 		}
+		fmt.Println("Aurora: New connection from", conn.RemoteAddr())
 		go aurora.handlePackets(conn)
 	}
 }
 
 func (aurora *Aurora) handlePackets(conn net.Conn) {
-	var newFile *os.File
+	files := map[string]*os.File{}
 	decoder := json.NewDecoder(conn)
 	for {
 		packet := Packet{}
@@ -52,24 +54,24 @@ func (aurora *Aurora) handlePackets(conn net.Conn) {
 		} else {
 			switch packet.Type {
 			case "FILE":
-				if packet.Done && newFile != nil {
-					newFile.Close()
-					fmt.Println("Finished downloading file named " + packet.FileName)
-				} else if packet.Done && newFile == nil {
+				if packet.Done && files[packet.FileName] != nil {
+					files[packet.FileName].Close()
+					fmt.Println("Aurora: Finished downloading", packet.FileName)
+				} else if packet.Done && files[packet.FileName] == nil {
 					continue
 				} else {
-					if newFile == nil {
-						fmt.Println("Started downloading file named " + packet.FileName)
+					if files[packet.FileName] == nil {
+						fmt.Println("Aurora: Started downloading", packet.FileName)
 						if _, err := os.Stat(packet.FileName); os.IsNotExist(err) {
-							newFile, _ = os.Create(packet.FileName)
+							files[packet.FileName], _ = os.Create(packet.FileName)
 						} else {
-							newFile, _ = os.Open(packet.FileName)
+							files[packet.FileName], _ = os.Open(packet.FileName)
 						}
 					}
-					newFile.WriteAt(packet.Data, packet.BytePos*1024)
+					files[packet.FileName].WriteAt(packet.Data, packet.BytePos*1024)
 				}
 			case "MESSAGE":
-				fmt.Println("Message: " + string(packet.Data))
+				fmt.Println("Aurora: incoming message \"" + string(packet.Data) + "\"")
 			}
 		}
 	}
