@@ -7,59 +7,59 @@ import (
 
 type Conn net.Conn
 
-type ItemSet struct {
+type Set struct {
 	items map[Conn]bool
 	lock  sync.RWMutex
 }
 
-func (s *ItemSet) Add(conn Conn) *ItemSet {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if s.items == nil {
-		s.items = make(map[Conn]bool)
+func (set *Set) Add(conn Conn) *Set {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+	if set.items == nil {
+		set.items = make(map[Conn]bool)
 	}
-	_, ok := s.items[conn]
+	_, ok := set.items[conn]
 	if !ok {
-		s.items[conn] = true
+		set.items[conn] = true
 	}
-	return s
+	return set
 }
 
-func (s *ItemSet) Clear() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.items = make(map[Conn]bool)
+func (set *Set) Clear() {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+	set.items = make(map[Conn]bool)
 }
 
-func (s *ItemSet) Delete(conn Conn) bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	_, ok := s.items[conn]
+func (set *Set) Delete(conn Conn) bool {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+	_, ok := set.items[conn]
 	if ok {
-		delete(s.items, conn)
+		delete(set.items, conn)
 	}
 	return ok
 }
 
-func (s *ItemSet) Has(conn Conn) bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	_, ok := s.items[conn]
+func (set *Set) Has(conn Conn) bool {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	_, ok := set.items[conn]
 	return ok
 }
 
-func (s *ItemSet) Items() []Conn {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (set *Set) Items() []Conn {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
 	var items []Conn
-	for i := range s.items {
+	for i := range set.items {
 		items = append(items, i)
 	}
 	return items
 }
 
-func (s *ItemSet) Size() int {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return len(s.items)
+func (set *Set) Size() int {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	return len(set.items)
 }

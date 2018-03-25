@@ -1,41 +1,48 @@
 package internal
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
-	"runtime"
-	"strings"
+	"os"
 )
 
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:4731")
+	defer conn.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
-	receiveCommand(conn)
-}
 
-func sendMessage(conn net.Conn, cmd string) {
-	writer := bufio.NewWriter(conn)
-	switch cmd {
-	case "PING":
-		writer.WriteString("PONG\\")
-	}
-	writer.Flush()
-}
+	buffer := make([]byte, 1024)
 
-func receiveCommand(conn net.Conn) {
-	reader := bufio.NewReader(conn)
+	file, _ := os.Open("f.exe")
+	defer file.Close()
+
+	packet := Packet{}
+	enc := json.NewEncoder(conn)
+
+	i := 0
+
 	for {
-		cmd, err := reader.ReadString('\\')
-
-		if err != nil {
-			fmt.Println(err)
-			runtime.Goexit()
+		packet.Type = "FILE"
+		packet.FileName = "test.exe"
+		packet.Done = false
+		packet.BytePos = int64(i)
+		_, err := file.Read(buffer)
+		if err == io.EOF {
+			packet.BytePos = 0
+			packet.Done = true
+			enc.Encode(packet)
+			break
 		}
-
-		cmd = strings.TrimRight(cmd, "\\")
-		sendMessage(conn, cmd)
+		if i == 10 {
+			enc.Encode(Packet{"MESSAGE", "AA", 0, []byte("TEST"), false})
+		}
+		packet.Data = buffer
+		enc.Encode(packet)
+		i++
+		fmt.Println(i)
 	}
 }
