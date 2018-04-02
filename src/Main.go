@@ -6,7 +6,5 @@ import (
 
 func main() {
 	a := internal.Aurora{}
-	a.Listen()
-	for {
-	}
+	a.Init()
 }
