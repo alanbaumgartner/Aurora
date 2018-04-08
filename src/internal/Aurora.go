@@ -98,34 +98,34 @@ func (aurora *Aurora) handleCommands() {
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
-					aurora.removeClient(-1)
+					aurora.simplePacket(-1, "REMOVE")
 				} else {
-					aurora.removeClient(index)
+					aurora.simplePacket(index, "REMOVE")
 				}
 			} else {
-				aurora.removeClient(-1)
+				aurora.simplePacket(-1, "REMOVE")
 			}
 		case "3":
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
-					aurora.addClientPersist(-1)
+					aurora.simplePacket(-1, "PERSISTENCE")
 				} else {
-					aurora.addClientPersist(index)
+					aurora.simplePacket(index, "PERSISTENCE")
 				}
 			} else {
-				aurora.addClientPersist(-1)
+				aurora.simplePacket(-1, "PERSISTENCE")
 			}
 		case "4":
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
-					aurora.removeClientPersist(-1)
+					aurora.simplePacket(-1, "RMPERSISTENCE")
 				} else {
-					aurora.removeClientPersist(index)
+					aurora.simplePacket(index, "RMPERSISTENCE")
 				}
 			} else {
-				aurora.removeClientPersist(-1)
+				aurora.simplePacket(-1, "RMPERSISTENCE")
 			}
 		case "5":
 			clearScreen()
@@ -177,7 +177,6 @@ func (aurora *Aurora) pingClient() {
 		}
 	}
 	printLogo()
-	// TODO Fix this shitty layout.
 	var i int
 	for index, client := range aurora.clients.All() {
 		ip := client.GetConn().RemoteAddr().String()
@@ -197,107 +196,57 @@ func (aurora *Aurora) pingClient() {
 		}
 		fmt.Println("|")
 	}
-	fmt.Println("+---+---------------------+")
+	if i != 0 {
+		fmt.Println("+---+---------------------+")
+	} else {
+		fmt.Println("+-------------------------+")
+	}
 	fmt.Println("| Press Enter To Continue |")
 	fmt.Println("+-------------------------+")
 	aurora.getInput()
 }
 
-func (aurora *Aurora) removeClient(index int) {
-
+func (aurora *Aurora) simplePacket(index int, packet string) {
 	if index != -1 && aurora.clients.Get(index) != (Client{}) {
-		cl := aurora.clients.Get(index)
-		enc := cl.GetEncoder()
-		err := enc.Encode(Packet{"REMOVE", "", 0, nil, false})
-		aurora.removeConnection(cl.GetConn())
-		if err != nil {
-			fmt.Println(err)
-		}
-		printLogo()
-		fmt.Println("+-------------------------+")
-		fmt.Println("|   Connection Removed    |")
-		fmt.Println("| Press Enter To Continue |")
-		fmt.Println("+-------------------------+")
-		aurora.getInput()
-	} else {
-		printLogo()
-		fmt.Println("+-------------------------+")
-		fmt.Println("|  Connection Not Found   |")
-		fmt.Println("| Press Enter To Continue |")
-		fmt.Println("+-------------------------+")
-		aurora.getInput()
-	}
-}
-
-func (aurora *Aurora) addClientPersist(index int) {
-	if index == -99 {
-		for _, client := range aurora.clients.All() {
-			enc := client.GetEncoder()
-			err := enc.Encode(Packet{"PERSIST", "", 0, nil, false})
+		if index == -99 {
+			for _, client := range aurora.clients.All() {
+				if packet == "REMOVE" {
+					aurora.removeConnection(client.GetConn())
+				}
+				enc := client.GetEncoder()
+				err := enc.Encode(Packet{packet, "", 0, nil, false})
+				if err != nil {
+					fmt.Println(err)
+					aurora.removeConnection(client.GetConn())
+				}
+			}
+		} else {
+			cl := aurora.clients.Get(index)
+			enc := cl.GetEncoder()
+			err := enc.Encode(Packet{packet, "", 0, nil, false})
 			if err != nil {
 				fmt.Println(err)
-				aurora.removeConnection(client.GetConn())
+				aurora.removeConnection(cl.GetConn())
 			}
-			printLogo()
+		}
+		printLogo()
+		switch packet {
+		case "PERSISTENCE":
 			fmt.Println("+-------------------------+")
 			fmt.Println("|    Persistence Added    |")
 			fmt.Println("| Press Enter To Continue |")
 			fmt.Println("+-------------------------+")
-			aurora.getInput()
-		}
-	} else if index != -1 && aurora.clients.Get(index) != (Client{}) {
-		cl := aurora.clients.Get(index)
-		enc := cl.GetEncoder()
-		err := enc.Encode(Packet{"PERSIST", "", 0, nil, false})
-		if err != nil {
-			fmt.Println(err)
-			aurora.removeConnection(cl.GetConn())
-		}
-		printLogo()
-		fmt.Println("+-------------------------+")
-		fmt.Println("|    Persistence Added    |")
-		fmt.Println("| Press Enter To Continue |")
-		fmt.Println("+-------------------------+")
-		aurora.getInput()
-	} else {
-		printLogo()
-		fmt.Println("+-------------------------+")
-		fmt.Println("|  Connection Not Found   |")
-		fmt.Println("| Press Enter To Continue |")
-		fmt.Println("+-------------------------+")
-		aurora.getInput()
-	}
-}
-
-func (aurora *Aurora) removeClientPersist(index int) {
-	if index == -99 {
-		for _, client := range aurora.clients.All() {
-			enc := client.GetEncoder()
-			err := enc.Encode(Packet{"RMPERSIST", "", 0, nil, false})
-			if err != nil {
-				fmt.Println(err)
-				aurora.removeConnection(client.GetConn())
-			}
-			printLogo()
+		case "RMPERSISTENCE":
 			fmt.Println("+-------------------------+")
 			fmt.Println("|   Persistence Removed   |")
 			fmt.Println("| Press Enter To Continue |")
 			fmt.Println("+-------------------------+")
-			aurora.getInput()
+		case "REMOVE":
+			fmt.Println("+-------------------------+")
+			fmt.Println("|   Connection Removed    |")
+			fmt.Println("| Press Enter To Continue |")
+			fmt.Println("+-------------------------+")
 		}
-	} else if index != -1 && aurora.clients.Get(index) != (Client{}) {
-		cl := aurora.clients.Get(index)
-		enc := cl.GetEncoder()
-		err := enc.Encode(Packet{"RMPERSIST", "", 0, nil, false})
-		if err != nil {
-			fmt.Println(err)
-			aurora.removeConnection(cl.GetConn())
-		}
-		printLogo()
-		fmt.Println("+-------------------------+")
-		fmt.Println("|   Persistence Removed   |")
-		fmt.Println("| Press Enter To Continue |")
-		fmt.Println("+-------------------------+")
 		aurora.getInput()
 	} else {
 		printLogo()
