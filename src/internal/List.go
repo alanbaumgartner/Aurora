@@ -1,54 +1,74 @@
 package internal
 
 import (
+	"encoding/json"
 	"net"
 )
 
+type Client struct {
+	conn net.Conn
+	enc  *json.Encoder
+	dec  *json.Decoder
+}
+
+func (client *Client) GetConn() net.Conn {
+	return client.conn
+}
+
+func (client *Client) GetEncoder() json.Encoder {
+	return *client.enc
+}
+
+func (client *Client) GetDecoder() json.Decoder {
+	return *client.dec
+}
+
 type List struct {
-	List []net.Conn
+	Clients []Client
 }
 
 func NewList() List {
 	self := List{}
-	self.List = []net.Conn{}
+	self.Clients = []Client{}
 	return self
 }
 
-func (list *List) Get(index int) net.Conn {
-	if index < len(list.List) {
-		return list.List[index]
+func (list *List) Get(index int) Client {
+	if index < len(list.Clients) {
+		return list.Clients[index]
 	}
-	return nil
+	return Client{}
 }
 
 func (list *List) Add(conn net.Conn) {
-	for _, conn := range list.List {
-		if conn == conn {
+	for _, connData := range list.Clients {
+		if connData.GetConn() == conn {
 			return
 		}
 	}
-	list.List = append(list.List, conn)
+	newConnData := Client{conn, json.NewEncoder(conn), json.NewDecoder(conn)}
+	list.Clients = append(list.Clients, newConnData)
 }
 
 func (list *List) Remove(conn net.Conn) {
-	for index, conn := range list.List {
-		if conn == conn {
-			list.List = append(list.List[:index], list.List[index+1:]...)
+	for index, connData := range list.Clients {
+		if connData.GetConn() == conn {
+			list.Clients = append(list.Clients[:index], list.Clients[index+1:]...)
 			return
 		}
 	}
 }
 
-func (list *List) All() []net.Conn {
-	return list.List
+func (list *List) All() []Client {
+	return list.Clients
 }
 
 func (list *List) Clear() {
-	list.List = []net.Conn{}
+	list.Clients = []Client{}
 }
 
 func (list *List) isEmpty() bool {
-	if len(list.List) == 0 {
+	if len(list.Clients) == 0 {
 		return true
 	}
 	return false

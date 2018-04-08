@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	a := internal.Aurora{}
-	a.Init()
+	a := internal.NewAurora()
+	a.Start()
 }
