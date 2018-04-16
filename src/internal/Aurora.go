@@ -1,6 +1,7 @@
 package internal
 
 import (
+	. "Aurora/src/util"
 	"bufio"
 	"fmt"
 	"net"
@@ -9,18 +10,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// Incoming socket data struct
-
-type Packet struct {
-	Type string
-
-	StringData string
-
-	BytePos  int64
-	FileData []byte
-	Done     bool
-}
 
 // CLI interface struct
 

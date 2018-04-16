@@ -1,10 +1,10 @@
 package main
 
 import (
-	"Aurora/src/internal"
+	. "Aurora/src/internal"
 )
 
 func main() {
-	a := internal.NewAurora()
+	a := NewAurora()
 	a.Start()
 }
