@@ -1,52 +1,52 @@
 package util
 
 type Packet struct {
-	form string
+	Form string
 
-	stringData string
+	StringData string
 
 	// Variables for file transfers
-	bytePos   int64
-	fileData  []byte
-	completed bool
+	BytePos   int64
+	FileData  []byte
+	Completed bool
 }
 
 func (packet *Packet) GetForm() string {
-	return packet.form
+	return packet.Form
 }
 
 func (packet *Packet) SetForm(newForm string) {
-	packet.form = newForm
+	packet.Form = newForm
 }
 
 func (packet *Packet) GetStringData() string {
-	return packet.stringData
+	return packet.StringData
 }
 
 func (packet *Packet) SetStringData(newStringData string) {
-	packet.stringData = newStringData
+	packet.StringData = newStringData
 }
 
 func (packet *Packet) GetBytePos() int64 {
-	return packet.bytePos
+	return packet.BytePos
 }
 
 func (packet *Packet) SetBytePos(newBytePos int64) {
-	packet.bytePos = newBytePos
+	packet.BytePos = newBytePos
 }
 
 func (packet *Packet) GetFileData() []byte {
-	return packet.fileData
+	return packet.FileData
 }
 
 func (packet *Packet) SetFileData(newFileData []byte) {
-	packet.fileData = newFileData
+	packet.FileData = newFileData
 }
 
 func (packet *Packet) GetComplete() bool {
-	return packet.completed
+	return packet.Completed
 }
 
 func (packet *Packet) SetCompleted(newCompleted bool) {
-	packet.completed = newCompleted
+	packet.Completed = newCompleted
 }

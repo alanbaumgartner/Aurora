@@ -5,24 +5,6 @@ import (
 	"net"
 )
 
-type Client struct {
-	conn net.Conn
-	enc  *json.Encoder
-	dec  *json.Decoder
-}
-
-func (client *Client) GetConn() net.Conn {
-	return client.conn
-}
-
-func (client *Client) GetEncoder() json.Encoder {
-	return *client.enc
-}
-
-func (client *Client) GetDecoder() json.Decoder {
-	return *client.dec
-}
-
 type List struct {
 	Clients []Client
 }

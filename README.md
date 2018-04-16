@@ -6,10 +6,10 @@ Aurora RAT or Remote Administration Tool is written in Go, using wxGo as a GUI t
 
 This project was started to learn networking in go and get myself started in the security field.
 
-## External Libraries Required
+## Usage
 
-[wxGo](https://github.com/dontpanic92/wxGo)
+Compile and run Main.go then run the stub on whatever computer you wish to control.
 
-## Notice
+## Stub
 
-Currently dropping GUI support in favor or simplicity. A GUI will be added when Aurora itself is more fleshed out.
+The stub can be found [here](https://github.com/alanbaumgartner/Aurora-Stub).
