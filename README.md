@@ -2,7 +2,7 @@
 
 ## About
 
-Aurora RAT or Remote Administration Tool is written in Go, using wxGo as a GUI toolkit.
+Aurora RAT or Remote Administration Tool is written in Go.
 
 This project was started to learn networking in go and get myself started in the security field.
 
